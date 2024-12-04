@@ -1,0 +1,44 @@
+contract TianXuanADM is ERC721, Ownable {
+    
+    event ADMPurchased(address indexed buyer, uint256 indexed tokenId, uint256 price);
+
+    mapping(uint256 => uint256) public admPrices;
+
+    constructor() ERC721("TianXuanADM", "TXN") {}
+
+    function changeOwner(address _newOwner) external onlyOwner {
+        transferOwnership(_newOwner);
+    }
+
+    function batchMintADMs(address[] memory to, uint256[] memory tokenIds) external onlyOwner {
+        require(to.length == tokenIds.length, "Arrays must have the same length");
+
+        for (uint256 i = 0; i < to.length; i++) {
+            _mint(to[i], tokenIds[i]);
+        }
+    }
+
+    function setADMPrice(uint256 tokenId, uint256 price) external onlyOwner {
+        require(_exists(tokenId), "ERC721: URI set of nonexistent token");
+        admPrices[tokenId] = price;
+    }
+
+    function buyADM(uint256 tokenId) external payable {
+        require(_exists(tokenId), "ERC721: URI set of nonexistent token");
+        require(admPrices[tokenId] > 0, "ADM price must be greater than 0");
+        require(msg.value >= admPrices[tokenId], "Ether sent is not enough");
+
+        address owner = ownerOf(tokenId);
+        uint256 price = admPrices[tokenId];
+        require(owner == msg.sender || price == 0, "You are not the owner and the price is not 0");
+
+        if (owner != msg.sender) {
+            payable(owner).transfer(msg.value);
+        }
+
+        _safeTransfer(owner, msg.sender, tokenId,"");
+
+        delete admPrices[tokenId]; 
+        emit ADMPurchased(msg.sender, tokenId, price);
+    }
+}
